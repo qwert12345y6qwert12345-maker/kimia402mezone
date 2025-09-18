@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جزئیات محصول - مزون کیمیا</title>
+<style>
+body{font-family:Tahoma,sans-serif;background:#f6f7fb;margin:0;padding:20px}
+.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.gallery{display:flex;gap:10px;margin-bottom:20px;overflow-x:auto}
+.gallery img{width:120px;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent}
+.gallery img.selected{border-color:#d63384}
+.main-img{width:100%;height:400px;object-fit:cover;border-radius:12px;margin-bottom:20px}
+h2{color:#d63384}
+.price{color:#d63384;font-weight:700;font-size:20px;margin:10px 0}
+.desc{margin-bottom:15px;color:#333}
+.options{display:flex;gap:12px;align-items:center;margin-bottom:15px}
+select,input[type=number]{padding:6px;border-radius:8px;border:1px solid #ccc}
+button{background:#d63384;color:#fff;padding:10px 16px;border:none;border-radius:10px;cursor:pointer;font-weight:700}
+.contact{margin-top:20px;font-size:14px;color:#555}
+</style>
+</head>
+<body>
+<div class="container">
+<h2 id="title">عنوان محصول</h2>
+<img id="mainImg" class="main-img" src="" alt="تصویر محصول">
+<div class="gallery" id="gallery"></div>
+<div class="price" id="price"></div>
+<div class="desc" id="desc"></div>
+
+<div class="options">
+<label>رنگ:</label>
+<select id="colorSelect"></select>
+</div>
+<div class="options">
+<label>تعداد:</label>
+<input type="number" id="qty" value="1" min="1">
+</div>
+
+<button id="addToCart">افزودن به سبد خرید</button>
+
+<div class="contact">
+شماره تماس برای اطلاعات بیشتر: <strong>09123456789</strong>
+</div>
+</div>
+
+<script>
+const STORAGE_KEY='mezoun_kimia_products';
+const CART_KEY='mezoun_kimia_cart';
+const urlParams=new URLSearchParams(window.location.search);
+const id=urlParams.get('id');
+const products=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+const product=products[id];
+
+if(!product){alert('محصول یافت نشد');location.href='index.html';}
+
+document.getElementById('title').textContent=product.title;
+document.getElementById('desc').textContent=product.desc;
+document.getElementById('price').textContent=product.price+' تومان';
+
+const mainImg=document.getElementById('mainImg');
+const gallery=document.getElementById('gallery');
+
+if(product.images && product.images.length){
+  mainImg.src=product.images[0];
+  product.images.forEach((imgSrc,i)=>{
+    const img=document.createElement('img'); img.src=imgSrc;
+    if(i===0) img.classList.add('selected');
+    img.onclick=()=>{mainImg.src=imgSrc;document.querySelectorAll('.gallery img').forEach(im=>im.classList.remove('selected'));img.classList.add('selected');}
+    gallery.appendChild(img);
+  })
+}
+
+const colorSelect=document.getElementById('colorSelect');
+if(product.colors && product.colors.length){
+  product.colors.forEach(color=>{
+    const opt=document.createElement('option'); opt.value=color; opt.textContent=color; colorSelect.appendChild(opt);
+  })
+}
+
+document.getElementById('addToCart').onclick=()=>{
+  const cart=JSON.parse(localStorage.getItem(CART_KEY)||'[]');
+  const selectedColor=colorSelect.value;
+  const qty=parseInt(document.getElementById('qty').value)||1;
+  const item={title:product.title,price:product.price,images:product.images,colors:product.colors,color:selectedColor,qty:qty};
+  cart.push(item);
+  localStorage.setItem(CART_KEY,JSON.stringify(cart));
+  alert('محصول به سبد خرید اضافه شد!');
+  location.href='cart.html';
+}
+</script>
+</body>
+</html>

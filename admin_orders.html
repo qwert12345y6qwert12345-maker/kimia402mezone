@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سفارش‌های مشتریان - مزون کیمیا</title>
+<style>
+body{font-family:Tahoma,sans-serif;background:#f6f7fb;margin:0;padding:20px}
+.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+h2{color:#d63384;text-align:center;margin-bottom:20px}
+.order-card{border:1px solid #eee;border-radius:10px;padding:12px;margin-bottom:12px;display:flex;gap:12px;align-items:center;background:white}
+.order-card img{width:80px;height:80px;object-fit:cover;border-radius:8px}
+.order-info{flex:1;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.send-btn{background:#28a745;padding:6px 10px;font-size:13px;color:white;border:none;border-radius:6px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>سفارش‌های مشتریان</h2>
+  <div id="orders"></div>
+</div>
+
+<script>
+const ORDERS_KEY='mezoun_kimia_orders';
+const ADMIN_PASSWORD='kimia123';
+
+function loadOrders(){return JSON.parse(localStorage.getItem(ORDERS_KEY)||'[]')}
+function saveOrders(o){localStorage.setItem(ORDERS_KEY,JSON.stringify(o))}
+
+// بررسی ورود مدیر
+const pwd=prompt('رمز مدیر:');
+if(pwd!==ADMIN_PASSWORD){alert('رمز اشتباه است');location.href='index.html';}
+
+function renderOrders(){
+  const orders=loadOrders();
+  const container=document.getElementById('orders');
+  container.innerHTML='';
+  if(!orders.length){container.innerHTML='سفارشی موجود نیست'; return}
+
+  orders.forEach((o,i)=>{
+    const div=document.createElement('div'); div.className='order-card';
+    const img=document.createElement('img'); img.src=o.items[0].images[0]||''; div.appendChild(img);
+
+    const info=document.createElement('div'); info.className='order-info';
+    info.innerHTML=o.items.map(it=>`<div>${it.title} - رنگ: ${it.color} - تعداد: ${it.qty} - <strong>${it.price} تومان</strong></div>`).join('')+
+      `<div>آدرس: ${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}</div>`+
+      `<div>روش پرداخت: ${o.payment}</div>`+
+      `<div>تاریخ: ${o.date}</div>`;
+    div.appendChild(info);
+
+    const btn=document.createElement('button'); btn.textContent='ارسال شد'; btn.className='send-btn';
+    btn.onclick=()=>{
+      orders.splice(i,1);
+      saveOrders(orders);
+      renderOrders();
+    }
+    div.appendChild(btn);
+    container.appendChild(div);
+  })
+}
+
+renderOrders();
+</script>
+
+</body>
+</html>
