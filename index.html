@@ -1,226 +1,104 @@
-<!doctype html>
-<html lang="fa" dir="rtl">
+<!DOCTYPE html>
+<html lang="fa">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>مزون کیمیا</title>
-<style>
-:root{--accent:#d63384;--muted:#666}
-*{box-sizing:border-box;font-family:Tahoma, sans-serif}
-body{margin:0;background:#f6f7fb;color:#222}
-header{background:white;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 1px 6px rgba(10,10,10,0.06)}
-.brand{display:flex;align-items:center;gap:12px}
-.logo{width:54px;height:54px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#6f42c1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
-.title{font-size:18px}
-.controls{display:flex;gap:8px;align-items:center}
-input[type="search"], select{padding:10px 12px;border-radius:8px;border:1px solid #e0e0e6;background:white}
-button{background:var(--accent);color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-main{padding:20px;max-width:1150px;margin:18px auto}
-.grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
-.products{background:white;padding:14px;border-radius:12px;min-height:320px}
-.side{background:white;padding:14px;border-radius:12px}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.card{border:1px solid #eee;border-radius:10px;padding:10px;background:#fff;display:flex;flex-direction:column;gap:8px}
-.img{height:160px;background:#f2f2f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
-.price{color:var(--accent);font-weight:700}
-.meta{font-size:13px;color:var(--muted)}
-footer{max-width:1150px;margin:18px auto;text-align:center;color:#777}
-.admin-area{display:flex;flex-direction:column;gap:10px}
-label{font-size:13px;color:#333}
-textarea, input[type=text], input[type=number]{width:100%;padding:8px;border-radius:8px;border:1px solid #e5e5ea}
-.hidden{display:none}
-.actions{display:flex;gap:8px}
-.small{padding:6px 8px;font-size:13px;border-radius:8px}
-@media (max-width:900px){.grid{grid-template-columns:1fr;}.controls{flex:1;justify-content:flex-end}}
-</style>
+  <meta charset="UTF-8">
+  <title>مزون کیمیا</title>
+  <style>
+    body { font-family: sans-serif; direction: rtl; margin: 20px; background:#fafafa; }
+    h1 { text-align:center; }
+    #ads { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 15px; margin-top:20px; }
+    .ad { border:1px solid #ddd; padding:10px; border-radius:10px; background:#fff; }
+    .hidden { display: none; }
+    button { margin-top:10px; padding:6px 12px; }
+  </style>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
 </head>
 <body>
-<header>
-  <div class="brand">
-    <div>
-      <div class="title">مزون کیمیا</div>
-      <div style="font-size:12px;color:var(--muted)">فروش لباس و پارچه </div>
-    </div>
+  <h1>مزون کیمیا</h1>
+
+  <div id="adminLogin">
+    <input type="password" id="adminPass" placeholder="رمز مدیر">
+    <button onclick="login()">ورود مدیر</button>
   </div>
-  <div class="controls">
-    <input id="search" type="search" placeholder="جست‌وجو..." />
-    <select id="sort">
-      <option value="newest">جدیدترین</option>
-      <option value="price-asc">قیمت: کم → زیاد</option>
-      <option value="price-desc">قیمت: زیاد → کم</option>
-    </select>
-    <button onclick="location.href='cart.html'">سبد خرید 🛒</button>
-    <button id="loginBtn">ورود مدیریت</button>
+
+  <div id="adminPanel" class="hidden">
+    <h3>افزودن آگهی جدید</h3>
+    <input type="text" id="title" placeholder="عنوان"><br>
+    <textarea id="desc" placeholder="توضیحات"></textarea><br>
+    <input type="text" id="price" placeholder="قیمت"><br>
+    <button onclick="addAd()">ذخیره آگهی</button>
   </div>
-</header>
 
-<main>
-<div class="grid">
-<section class="products">
-<h3>آگهی‌ها (<span id="count">0</span>)</h3>
-<div id="cards" class="cards"></div>
-<div id="emptyHint" style="text-align:center;color:var(--muted);padding:30px">فعلا آگهی‌ای وجود ندارد.</div>
-</section>
+  <h2>🛍️ آگهی‌ها</h2>
+  <div id="ads"></div>
 
-<aside class="side">
-<h4>فیلترها</h4>
-<label>دسته‌بندی</label>
-<select id="categoryFilter">
-  <option value="all">همه</option>
-  <option value="لباس">لباس</option>
-  <option value="پارچه">پارچه</option>
-  <option value="اکسسوری">اکسسوری</option>
-</select>
-<label>قیمت تا (تومان)</label>
-<input id="priceMax" type="number" />
-<button id="applyFilter" class="small">اعمال</button>
-<button id="clearFilter" class="small" style="background:#eee;color:#222">پاک‌سازی</button>
+  <script>
+    // 🔹 پیکربندی Firebase
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-<hr />
-<div id="adminPanel">
-<h4>مدیریت آگهی</h4>
-<div id="notLogged" class="admin-area">
-<button id="loginPanelBtn" class="small">ورود مدیریت</button>
-</div>
-<div id="logged" class="admin-area hidden">
-<div style="font-size:13px;color:var(--muted)">وارد شده به‌عنوان مدیر</div>
-<button id="logoutBtn" class="small" style="background:#f03d3d">خروج</button>
-<button onclick="location.href='admin_orders.html'" class="small" style="background:#28a745">سفارش‌های مشتریان</button>
-<hr />
-<h5>افزودن آگهی جدید</h5>
-<label>عنوان</label><input id="pTitle" type="text" />
-<label>توضیحات</label><textarea id="pDesc" rows="3"></textarea>
-<label>دسته‌بندی</label><select id="pCategory">
-<option value="لباس">لباس</option>
-<option value="پارچه">پارچه</option>
-<option value="اکسسوری">اکسسوری</option>
-</select>
-<label>قیمت (تومان)</label><input id="pPrice" type="number" />
-<label>تصاویر (چند تصویر با Ctrl/Shift انتخاب کنید)</label>
-<input id="pImages" type="file" accept="image/*" multiple />
-<label>رنگ‌ها (مثلا: قرمز,آبی,سبز)</label>
-<input id="pColors" type="text" placeholder="مثلا قرمز,آبی,سبز" />
-<button id="addProduct" class="small">افزودن</button>
-</div>
-</div>
-</aside>
-</div>
-</main>
+    // شروع
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-<footer> مدیریت قادر به افزودن آگهی و مشاهده سفارش‌ها است.</footer>
+    const adsDiv = document.getElementById("ads");
+    const adminPanel = document.getElementById("adminPanel");
 
-<script>
-const STORAGE_KEY='mezoun_kimia_products';
-const ADMIN_PASSWORD='kimia123';
-
-function isAdminLogged(){return sessionStorage.getItem('mk_admin')==='1'}
-function setAdminLogged(v){v?sessionStorage.setItem('mk_admin','1'):sessionStorage.removeItem('mk_admin')}
-function loadProducts(){return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}
-function saveProducts(l){localStorage.setItem(STORAGE_KEY,JSON.stringify(l))}
-
-const cardsEl=document.getElementById('cards'),countEl=document.getElementById('count'),emptyHint=document.getElementById('emptyHint');
-
-function renderProducts(list){
-  cardsEl.innerHTML='';
-  if(!list.length){emptyHint.style.display='block';countEl.textContent='0';return}
-  emptyHint.style.display='none';countEl.textContent=list.length;
-  list.forEach((p,i)=>{
-    const c=document.createElement('div');c.className='card';
-    const img=document.createElement('div');img.className='img';
-    if(p.images && p.images.length){const im=new Image();im.src=p.images[0];im.style.maxWidth='100%';im.style.maxHeight='100%';img.appendChild(im)}
-    else img.textContent='بدون تصویر';
-    const title=document.createElement('div');title.innerHTML='<strong>'+p.title+'</strong>';
-    const price=document.createElement('div');price.className='price';price.textContent=p.price+' تومان';
-    const actions=document.createElement('div');actions.className='actions';
-    const v=document.createElement('button');v.className='small';v.textContent='نمایش';v.onclick=()=>location.href='product.html?id='+i;actions.appendChild(v);
-    if(isAdminLogged()){
-      const del=document.createElement('button');del.className='small';del.textContent='حذف';del.style.background='#f66';
-      del.onclick=()=>{let all=loadProducts();all.splice(i,1);saveProducts(all);applyFilters()};
-      actions.appendChild(del)
+    // رمز ورود مدیر
+    function login(){
+      let pass = document.getElementById("adminPass").value;
+      if(pass === "kimia123"){
+        adminPanel.classList.remove("hidden");
+      } else {
+        alert("رمز اشتباه است!");
+      }
     }
-    c.append(img,title,price,actions);cardsEl.appendChild(c);
-  })
-}
 
-function applyFilters(){
-  let l=loadProducts();
-  const q=document.getElementById('search').value.toLowerCase();
-  const cat=document.getElementById('categoryFilter').value;
-  const max=document.getElementById('priceMax').value;
-  if(q) l=l.filter(p=>p.title.toLowerCase().includes(q)||p.desc.toLowerCase().includes(q));
-  if(cat!=='all') l=l.filter(p=>p.category===cat);
-  if(max) l=l.filter(p=>+p.price<=+max);
-  const s=document.getElementById('sort').value;
-  if(s==='price-asc') l.sort((a,b)=>a.price-b.price);
-  else if(s==='price-desc') l.sort((a,b)=>b.price-a.price);
-  else l.sort((a,b)=>b.createdAt-b.createdAt);
-  renderProducts(l)
-}
+    // افزودن آگهی
+    async function addAd(){
+      let title = document.getElementById("title").value;
+      let desc = document.getElementById("desc").value;
+      let price = document.getElementById("price").value;
 
-function showLogin(){
-  const pass=prompt('رمز مدیریت:');
-  if(pass===ADMIN_PASSWORD){setAdminLogged(true);updateAdmin();alert('ورود موفق')}
-  else alert('نادرست')
-}
+      if(!title || !desc || !price){
+        alert("همه فیلدها را پر کنید!");
+        return;
+      }
 
-function updateAdmin(){
-  document.getElementById('notLogged').classList.toggle('hidden',isAdminLogged());
-  document.getElementById('logged').classList.toggle('hidden',!isAdminLogged());
-  document.getElementById('loginBtn').textContent=isAdminLogged()?'مدیریت (وارد شده)':'ورود مدیریت'
-}
+      await db.collection("ads").add({
+        title, desc, price,
+        date: new Date().toISOString()
+      });
 
-function readImageFiles(files){
-  return new Promise(resolve=>{
-    const arr=[];
-    let count=0;
-    if(!files.length) resolve([]);
-    for(let f of files){
-      const fr=new FileReader();
-      fr.onload=()=>{arr.push(fr.result); count++; if(count===files.length) resolve(arr);}
-      fr.readAsDataURL(f);
+      alert("✅ آگهی ثبت شد!");
+      document.getElementById("title").value="";
+      document.getElementById("desc").value="";
+      document.getElementById("price").value="";
     }
-  })
-}
 
-async function addProduct(){
-  const t=document.getElementById('pTitle').value;
-  const d=document.getElementById('pDesc').value;
-  const c=document.getElementById('pCategory').value;
-  const p=document.getElementById('pPrice').value;
-  const f=document.getElementById('pImages').files;
-  const colors=document.getElementById('pColors').value.split(',').map(x=>x.trim()).filter(x=>x);
-  const imgs=await readImageFiles(f);
-  const l=loadProducts();
-  l.unshift({title:t,desc:d,category:c,price:p,images:imgs,colors:colors,createdAt:Date.now()});
-  saveProducts(l);applyFilters();alert('آگهی اضافه شد')
-}
-
-document.getElementById('loginBtn').onclick=showLogin;
-document.getElementById('loginPanelBtn').onclick=showLogin;
-document.getElementById('logoutBtn').onclick=()=>{setAdminLogged(false);updateAdmin()};
-document.getElementById('addProduct').onclick=addProduct;
-document.getElementById('search').oninput=applyFilters;
-document.getElementById('sort').onchange=applyFilters;
-document.getElementById('applyFilter').onclick=applyFilters;
-document.getElementById('clearFilter').onclick=()=>{document.getElementById('categoryFilter').value='all';document.getElementById('priceMax').value='';applyFilters()}
-updateAdmin();applyFilters();
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCKORIzuLKqeEDJxibJodGKS23118Dgdig",
-  authDomain: "kimia402mezon.firebaseapp.com",
-  projectId: "kimia402mezon",
-  storageBucket: "kimia402mezon.firebasestorage.app",
-  messagingSenderId: "333411485887",
-  appId: "1:333411485887:web:f7f8139f343751458f5e0a"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-</script>
+    // نمایش آگهی‌ها به صورت زنده
+    db.collection("ads").orderBy("date","desc").onSnapshot(snapshot=>{
+      adsDiv.innerHTML = "";
+      snapshot.forEach(doc=>{
+        let ad = doc.data();
+        adsDiv.innerHTML += `
+          <div class="ad">
+            <h4>${ad.title}</h4>
+            <p>${ad.desc}</p>
+            <p>💵 ${ad.price} تومان</p>
+          </div>
+        `;
+      });
+    });
+  </script>
 </body>
 </html>
