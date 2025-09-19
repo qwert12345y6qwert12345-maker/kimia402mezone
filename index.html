@@ -204,6 +204,23 @@ document.getElementById('sort').onchange=applyFilters;
 document.getElementById('applyFilter').onclick=applyFilters;
 document.getElementById('clearFilter').onclick=()=>{document.getElementById('categoryFilter').value='all';document.getElementById('priceMax').value='';applyFilters()}
 updateAdmin();applyFilters();
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCKORIzuLKqeEDJxibJodGKS23118Dgdig",
+  authDomain: "kimia402mezon.firebaseapp.com",
+  projectId: "kimia402mezon",
+  storageBucket: "kimia402mezon.firebasestorage.app",
+  messagingSenderId: "333411485887",
+  appId: "1:333411485887:web:f7f8139f343751458f5e0a"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 </script>
 </body>
 </html>
