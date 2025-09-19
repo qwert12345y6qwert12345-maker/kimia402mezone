@@ -1,111 +1,87 @@
-<!DOCTYPE html>
-<html lang="fa">
+<!doctype html>
+<html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>ادامه فرآیند خرید - مزون کیمیا</title>
-  <style>
-    body { font-family: sans-serif; direction: rtl; margin: 20px; background:#fafafa; }
-    h2 { text-align: center; }
-    #map { width: 100%; height: 400px; margin: 20px 0; border-radius: 12px; border:1px solid #ccc; }
-    .section { background:#fff; padding:20px; margin:20px auto; max-width:600px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-    button { padding: 10px 20px; border:none; background:#4CAF50; color:white; border-radius:8px; cursor:pointer; }
-    button:hover { background:#45a049; }
-    label { display:block; margin:10px 0; }
-  </style>
-  <!-- لود کتابخانه نقشه leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ادامه فرآیند خرید - مزون کیمیا</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<style>
+body{font-family:Tahoma,sans-serif;background:#f6f7fb;margin:0;padding:20px}
+h2{text-align:center;color:#d63384;margin-bottom:20px}
+#map{height:300px;border-radius:12px;margin-bottom:20px}
+button{background:#d63384;color:white;padding:10px 14px;border:none;border-radius:8px;cursor:pointer;margin-top:10px}
+.payment-options{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:20px;text-align:center}
+</style>
 </head>
 <body>
-  <h2>ادامه فرآیند خرید</h2>
 
-  <div class="section">
-    <h3>انتخاب آدرس</h3>
-    <button onclick="locateMe()">📍 انتخاب مکان فعلی</button>
-    <div id="map"></div>
-    <p id="selectedAddress" style="color:green;"></p>
-  </div>
+<h2>ادامه فرآیند خرید</h2>
 
-  <div class="section">
-    <h3>روش پرداخت</h3>
-    <label><input type="radio" name="payment" value="cod"> پرداخت در محل</label>
-    <label><input type="radio" name="payment" value="online"> پرداخت آنلاین</label>
-    <button onclick="completeOrder()">تکمیل خرید</button>
-  </div>
+<div class="payment-options">
+  <button id="currentLocationBtn">انتخاب مکان فعلی</button>
+</div>
 
-  <script>
-    // نقشه
-    let map = L.map('map').setView([35.6892, 51.3890], 12); // پیشفرض تهران
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
+<div id="map"></div>
 
-    let marker;
+<div class="payment-options" id="paymentSection" style="display:none">
+  <h3>روش پرداخت را انتخاب کنید:</h3>
+  <button id="payOnDelivery">پرداخت در محل</button>
+  <button id="payOnline">پرداخت آنلاین</button>
+</div>
 
-    // کلیک روی نقشه برای انتخاب آدرس
-    map.on('click', function(e) {
-      if (marker) map.removeLayer(marker);
-      marker = L.marker(e.latlng).addTo(map);
-      document.getElementById("selectedAddress").textContent = 
-        "آدرس انتخاب شد: " + e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
-      localStorage.setItem("selectedAddress", JSON.stringify(e.latlng));
-    });
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+const CART_KEY='mezoun_kimia_cart';
+const ORDERS_KEY='mezoun_kimia_orders';
 
-    // دکمه انتخاب مکان فعلی
-    function locateMe(){
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          map.setView([lat,lng], 15);
-          if (marker) map.removeLayer(marker);
-          marker = L.marker([lat,lng]).addTo(map);
-          document.getElementById("selectedAddress").textContent = 
-            "آدرس (مکان فعلی): " + lat.toFixed(5) + ", " + lng.toFixed(5);
-          localStorage.setItem("selectedAddress", JSON.stringify({lat,lng}));
-        }, ()=>alert("دسترسی به مکان فعلی مقدور نیست"));
-      } else {
-        alert("مرورگر شما از مکان‌یابی پشتیبانی نمی‌کند");
-      }
-    }
+function loadCart(){return JSON.parse(localStorage.getItem(CART_KEY)||'[]')}
+function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c))}
+function loadOrders(){return JSON.parse(localStorage.getItem(ORDERS_KEY)||'[]')}
+function saveOrders(o){localStorage.setItem(ORDERS_KEY,JSON.stringify(o))}
 
-    // تکمیل سفارش
-    function completeOrder(){
-      const pay = document.querySelector('input[name="payment"]:checked');
-      if(!pay){ alert("لطفا روش پرداخت را انتخاب کنید"); return; }
+// ---------- نقشه ----------
+let selectedLatLng=null;
+const map = L.map('map').setView([35.6892,51.3890],13); // تهران
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+let marker=null;
+map.on('click', function(e){
+  selectedLatLng=e.latlng;
+  if(marker) marker.setLatLng(e.latlng);
+  else marker=L.marker(e.latlng).addTo(map);
+  document.getElementById('paymentSection').style.display='block';
+});
 
-      const addr = localStorage.getItem("selectedAddress");
-      if(!addr){ alert("لطفا آدرس خود را روی نقشه مشخص کنید"); return; }
+// ---------- انتخاب مکان فعلی ----------
+document.getElementById('currentLocationBtn').onclick=()=>{
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const lat=pos.coords.latitude;
+      const lng=pos.coords.longitude;
+      selectedLatLng={lat,lng};
+      map.setView([lat,lng],16);
+      if(marker) marker.setLatLng([lat,lng]);
+      else marker=L.marker([lat,lng]).addTo(map);
+      document.getElementById('paymentSection').style.display='block';
+    }, err=>alert('مکان‌یابی فعال نیست یا اجازه داده نشده'));
+  }else alert('مکان‌یابی در مرورگر شما پشتیبانی نمی‌شود');
+};
 
-      if(pay.value === "cod"){
-        alert("سفارش شما با موفقیت ثبت شد ✅ (پرداخت در محل)");
-        // ذخیره سفارش برای مدیر
-        saveOrder("پرداخت در محل");
-      } else if(pay.value === "online"){
-        alert("در حال انتقال به درگاه شاپر...");
-        // شماره کارت مقصد
-        const cardNumber = "60371425367854";
-        // شبیه‌سازی لینک به شاپرک
-        window.location.href = `https://www.shaparak.ir/payment?amount=100000&card=${cardNumber}`;
-      }
-    }
+// ---------- انتخاب پرداخت ----------
+document.getElementById('payOnDelivery').onclick=()=>{
+  if(!selectedLatLng){alert('لطفا مکان خود را روی نقشه انتخاب کنید'); return}
+  const cart=loadCart();
+  if(!cart.length){alert('سبد خرید خالی است'); return}
+  const order={items:cart,lat:selectedLatLng.lat,lng:selectedLatLng.lng,date:new Date().toLocaleString(),payment:'در محل'};
+  const orders=loadOrders();
+  orders.push(order);
+  saveOrders(orders);
+  saveCart([]);
+  alert('سفارش شما ثبت شد. پرداخت در محل انجام خواهد شد.');
+  location.href='index.html';
+};
 
-    // ذخیره سفارش در localStorage (برای مدیر)
-    function saveOrder(method){
-      let orders = JSON.parse(localStorage.getItem("orders")||"[]");
-      let cart = JSON.parse(localStorage.getItem("cart")||"[]");
-      let addr = JSON.parse(localStorage.getItem("selectedAddress"));
-      orders.push({
-        items: cart,
-        address: addr,
-        payment: method,
-        date: new Date().toLocaleString()
-      });
-      localStorage.setItem("orders", JSON.stringify(orders));
-      localStorage.removeItem("cart"); // خالی کردن سبد
-      alert("سفارش ثبت شد و به مدیر ارسال گردید ✅");
-      window.location.href = "index.html";
-    }
-  </script>
+document.getElementById('payOnline').onclick=()=>{alert('پرداخت آنلاین هنوز فعال نیست');};
+</script>
+
 </body>
 </html>
